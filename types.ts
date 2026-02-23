@@ -12,6 +12,7 @@ export interface Agent {
   status: NodeStatus;
   type: 'Orchestrator' | 'Worker' | 'Sentry';
   lastSeen: string;
+  skills: string[];
   metrics: {
     latency: number;
     tasksCompleted: number;
@@ -19,17 +20,22 @@ export interface Agent {
   };
 }
 
+export interface SubTask {
+  id: string;
+  label: string;
+  description: string;
+  complexity: 'Low' | 'Medium' | 'High';
+  status: 'pending' | 'in-progress' | 'completed' | 'failed';
+  assignedAgentId?: string;
+  requiredSkills?: string[];
+}
+
 export interface WorkflowStep {
   id: string;
   label: string;
   status: 'pending' | 'active' | 'completed' | 'failed';
   agentId?: string;
-}
-
-export interface NetworkStats {
-  connectedNodes: number;
-  totalTasks: number;
-  uptime: string;
+  subTasks?: SubTask[];
 }
 
 export interface LogEntry {
@@ -40,7 +46,6 @@ export interface LogEntry {
   source: string;
 }
 
-// FIX: Added missing PlayerStats interface required by ClawHUD and GameCanvas
 export interface PlayerStats {
   lives: number;
   health: number;
@@ -50,13 +55,11 @@ export interface PlayerStats {
   dynamite: number;
 }
 
-// FIX: Added missing GameState interface required by GameCanvas
 export interface GameState {
   stats: PlayerStats;
   isGameOver: boolean;
 }
 
-// FIX: Added missing ChatMessage interface required by CaptainsLog
 export interface ChatMessage {
   role: 'claw' | 'user';
   content: string;

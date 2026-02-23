@@ -1,18 +1,10 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 const OPENCLAW_SYSTEM_PROMPT = `
 You are the OpenClaw Nexus AI, the primary orchestration advisor for the OpenClaw Agentic Network.
 Your purpose is to assist the user in designing, debugging, and optimizing autonomous agent workflows.
-Provide technical insights, telemetry analysis, and architectural suggestions for agent-to-agent communication.
-Stay professional, analytical, and highly efficient. Use technical terminology related to LLMs, RAG, and multi-agent systems.
-`;
-
-// FIX: Added persona prompt for Captain Claw
-const CAPTAIN_CLAW_PROMPT = `
-You are Captain Claw, the legendary pirate cat. You speak in pirate slang.
-You are helping the user navigate the dangers of the high seas and the OpenClaw network.
-Your tone is adventurous, slightly gruff but encouraging. Refer to "treasure", "amulets", and "swashbuckling".
+Stay professional, analytical, and highly efficient.
 `;
 
 export class GeminiService {
@@ -20,7 +12,6 @@ export class GeminiService {
 
   async getOrchestrationAdvice(prompt: string): Promise<string> {
     try {
-      // FIX: Creating new GoogleGenAI instance right before the call as per best practices
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
         model: 'gemini-3-pro-preview',
@@ -30,7 +21,6 @@ export class GeminiService {
           temperature: 0.2,
         },
       });
-      // FIX: Accessing .text property directly
       return response.text || "No response from Nexus.";
     } catch (error) {
       console.error("Gemini Error:", error);
@@ -38,7 +28,42 @@ export class GeminiService {
     }
   }
 
-  // FIX: Added missing getCaptainAdvice method for CaptainsLog component
+  async decomposeTask(taskDescription: string): Promise<any[]> {
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-pro-preview',
+        contents: `Break down the following high-level task into exactly 4-6 manageable sub-tasks for an agentic network: "${taskDescription}"`,
+        config: {
+          systemInstruction: "You are a task decomposition engine. Provide a structured breakdown of objectives into atomic, actionable steps.",
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                id: { type: Type.STRING },
+                label: { type: Type.STRING },
+                description: { type: Type.STRING },
+                complexity: { type: Type.STRING, enum: ['Low', 'Medium', 'High'] },
+                requiredSkills: { 
+                  type: Type.ARRAY, 
+                  items: { type: Type.STRING },
+                  description: "List of skills needed for this task (e.g., 'NLP', 'Data Retrieval', 'Validation', 'Code Generation')"
+                },
+              },
+              required: ['id', 'label', 'description', 'complexity', 'requiredSkills']
+            }
+          }
+        },
+      });
+      return JSON.parse(response.text || "[]");
+    } catch (error) {
+      console.error("Decomposition Error:", error);
+      return [];
+    }
+  }
+
   async getCaptainAdvice(prompt: string): Promise<string> {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
@@ -46,11 +71,10 @@ export class GeminiService {
         model: 'gemini-3-pro-preview',
         contents: prompt,
         config: {
-          systemInstruction: CAPTAIN_CLAW_PROMPT,
+          systemInstruction: "You are Captain Claw, a pirate cat. Speak in pirate slang.",
           temperature: 0.7,
         },
       });
-      // FIX: Accessing .text property directly
       return response.text || "The sea be silent, matey.";
     } catch (error) {
       console.error("Gemini Error:", error);

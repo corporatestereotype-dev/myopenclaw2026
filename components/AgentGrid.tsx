@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Cpu, Activity, Zap, ShieldAlert } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Cpu, Activity, Zap, ShieldAlert, Filter, Tag } from 'lucide-react';
 import { Agent, NodeStatus } from '../types';
 
 interface AgentGridProps {
@@ -8,34 +8,86 @@ interface AgentGridProps {
 }
 
 const AgentGrid: React.FC<AgentGridProps> = ({ agents }) => {
+  const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+
+  const allSkills = useMemo(() => {
+    const skills = new Set<string>();
+    agents.forEach(agent => agent.skills.forEach(skill => skills.add(skill)));
+    return Array.from(skills).sort();
+  }, [agents]);
+
+  const filteredAgents = useMemo(() => {
+    if (!selectedSkill) return agents;
+    return agents.filter(agent => agent.skills.includes(selectedSkill));
+  }, [agents, selectedSkill]);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-      {agents.map(agent => (
-        <div key={agent.id} className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 hover:border-teal-500/50 transition-all group">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center space-x-3">
-              <div className={`p-2 rounded-lg ${getStatusBg(agent.status)}`}>
-                <Cpu size={20} className={getStatusColor(agent.status)} />
-              </div>
-              <div>
-                <h3 className="text-slate-100 font-bold text-sm tracking-tight">{agent.name}</h3>
-                <span className="text-[10px] text-slate-500 uppercase font-mono">{agent.type}</span>
-              </div>
-            </div>
-            <span className={`h-2 w-2 rounded-full ${getStatusDot(agent.status)} animate-pulse`} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mt-6">
-            <Metric label="Latency" value={`${agent.metrics.latency}ms`} icon={<Activity size={12}/>} />
-            <Metric label="Tokens" value={`${(agent.metrics.tokenUsage / 1000).toFixed(1)}k`} icon={<Zap size={12}/>} />
-          </div>
-
-          <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center">
-            <span className="text-[10px] text-slate-600 font-mono">ID: {agent.id}</span>
-            <button className="text-[10px] text-teal-500 font-bold hover:underline">RECONFIGURE</button>
-          </div>
+    <div className="space-y-6">
+      {/* Skill Filter Bar */}
+      <div className="flex items-center gap-3 overflow-x-auto pb-2 scroll-hide">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 border border-slate-700 rounded-lg text-slate-400 text-[10px] font-bold">
+          <Filter size={12} />
+          FILTER BY SKILL:
         </div>
-      ))}
+        <button 
+          onClick={() => setSelectedSkill(null)}
+          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
+            !selectedSkill ? 'bg-teal-500/20 border-teal-500/50 text-teal-400' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700'
+          }`}
+        >
+          ALL AGENTS
+        </button>
+        {allSkills.map(skill => (
+          <button 
+            key={skill}
+            onClick={() => setSelectedSkill(skill)}
+            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border whitespace-nowrap ${
+              selectedSkill === skill ? 'bg-teal-500/20 border-teal-500/50 text-teal-400' : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700'
+            }`}
+          >
+            {skill.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {filteredAgents.map(agent => (
+          <div key={agent.id} className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 hover:border-teal-500/50 transition-all group relative overflow-hidden">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center space-x-3">
+                <div className={`p-2 rounded-lg ${getStatusBg(agent.status)}`}>
+                  <Cpu size={20} className={getStatusColor(agent.status)} />
+                </div>
+                <div>
+                  <h3 className="text-slate-100 font-bold text-sm tracking-tight">{agent.name}</h3>
+                  <span className="text-[10px] text-slate-500 uppercase font-mono">{agent.type}</span>
+                </div>
+              </div>
+              <span className={`h-2 w-2 rounded-full ${getStatusDot(agent.status)} animate-pulse`} />
+            </div>
+
+            {/* Skills Tags */}
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {agent.skills.map(skill => (
+                <div key={skill} className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-800/80 border border-slate-700 rounded text-[9px] text-slate-400 font-medium">
+                  <Tag size={8} />
+                  {skill}
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mt-6">
+              <Metric label="Latency" value={`${agent.metrics.latency}ms`} icon={<Activity size={12}/>} />
+              <Metric label="Tokens" value={`${(agent.metrics.tokenUsage / 1000).toFixed(1)}k`} icon={<Zap size={12}/>} />
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-slate-800 flex justify-between items-center">
+              <span className="text-[10px] text-slate-600 font-mono">ID: {agent.id}</span>
+              <button className="text-[10px] text-teal-500 font-bold hover:underline">RECONFIGURE</button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
